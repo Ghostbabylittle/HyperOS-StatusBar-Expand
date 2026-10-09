@@ -45,16 +45,6 @@ $$\text{可用宽度} \approx \frac{\text{屏幕总宽度} - \text{挖孔宽度}
   ```java
   iconState.visibleState = View.GONE;
   child.setVisibility(View.GONE);
-  ```
-  从而导致超出 6 个的图标被底层直接掐断显示。
-
-### 4. 现代 LSPosed (LibXposed API 101) 架构约束
-在现代 Zygisk LSPosed 环境下：
-* 模块配置了 `META-INF/xposed/java_init.list` 时，LSPosed 会强制以 **LibXposed (API 101)** 原生模式加载，彻底跳过传统的 `assets/xposed_init`。
-* `java_init.list` 中指定的入口类**必须继承 `io.github.libxposed.api.XposedModule`**。若放入旧版 `IXposedHookLoadPackage` 类，将在实例化阶段抛出隐式 `ClassCastException` 导致模块直接静默崩溃。
-* 必须保持**单 DEX (`classes.dex`)** 架构，去除 Kotlin 运行时及 AndroidX 冗余依赖，避免引起 ART DexOpt 校验异常 (`Fail to get art odex vdex`)。
-* `META-INF/xposed/scope.list` 必须包含 `system`，并在 `module.prop` 中声明 `staticScope=true`，以实现守护进程对系统作用域的免手动勾选自动注册。
-
 ---
 
 ## 💡 解决方案

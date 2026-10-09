@@ -45,14 +45,6 @@ At default icon spacing (~14px), 6 icons occupy ~300px. When 7 or more icons att
   ```java
   iconState.visibleState = View.GONE;
   child.setVisibility(View.GONE);
-  ```
-
-### 4. Modern LSPosed Runtime Requirements (LibXposed API 101)
-Modern Zygisk LSPosed operates on the **LibXposed (API 101)** standard:
-* Modules declaring `META-INF/xposed/java_init.list` must extend `io.github.libxposed.api.XposedModule`. Legacy `IXposedHookLoadPackage` classes cause instant silent initialization crashes.
-* Modules must compile to a **single `classes.dex`** (avoiding multidex and Kotlin runtime overhead) to prevent ART DexOpt verification failures.
-* `META-INF/xposed/scope.list` must include `system` alongside target packages with `staticScope=true` for seamless daemon registration.
-
 ---
 
 ## 💡 The Solution
