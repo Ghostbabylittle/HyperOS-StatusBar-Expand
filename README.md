@@ -138,7 +138,7 @@ This module provides a pure Java, single-dex hook built directly on Modern LibXp
 ### Build Steps
 ```bash
 # Clone the repository
-git clone https://github.com/badgayisme-blip/HyperOS-StatusBar-Expand.git
+git clone https://github.com/Ghostbabylittle/HyperOS-StatusBar-Expand.git
 cd HyperOS-StatusBar-Expand
 
 # Build release APK

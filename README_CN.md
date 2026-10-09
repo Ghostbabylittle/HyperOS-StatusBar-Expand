@@ -140,7 +140,7 @@ $$\text{可用宽度} \approx \frac{\text{屏幕总宽度} - \text{挖孔宽度}
 ### 编译指令
 ```bash
 # 克隆仓库
-git clone https://github.com/badgayisme-blip/HyperOS-StatusBar-Expand.git
+git clone https://github.com/Ghostbabylittle/HyperOS-StatusBar-Expand.git
 cd HyperOS-StatusBar-Expand
 
 # 编译 Release APK
