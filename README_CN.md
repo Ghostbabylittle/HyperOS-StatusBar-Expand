@@ -1,4 +1,4 @@
-# HyperOS 状态栏 12 图标扩展模块 (Status Bar 12 Icons)
+# HyperOS 状态栏无限图标扩展模块 (Status Bar Unlimited Icons)
 
 [English](README.md) | [简体中文](README_CN.md)
 
@@ -7,7 +7,7 @@
 [![Xiaomi HyperOS](https://img.shields.io/badge/HyperOS-%E6%94%AF%E6%8C%81-orange.svg)]()
 [![Android 14](https://img.shields.io/badge/Android-14-green.svg)]()
 
-专为 **小米 HyperOS (澎湃 OS / Android 14+)** 设计的 LSPosed 模块。解除系统限制，将状态栏右侧系统状态图标数量上限从 **6 个扩展至 12 个**。
+专为 **小米 HyperOS (澎湃 OS / Android 14+)** 设计的 LSPosed 模块。彻底解除系统限制，状态栏右侧系统状态图标数量不再受限（由系统默认的 6 个提升为无上限展示）。
 
 ---
 
@@ -59,15 +59,15 @@ HyperOS 的 SystemUI 在 `com.android.systemui.statusbar.phone.MiuiIconManagerUt
 [第三阶段：坐标排版重算]
    ├── 遍历所有有效状态图标
    ├── 自右向左重新排布有效水平坐标
-   └── 强制将前 12 个图标设为 VISIBLE
+   └── 强制将所有有效图标设为 VISIBLE，无数量上限排布
 ```
 
 ---
 
 ## 🚀 核心特性
 
-* **扩展至 12 个图标**：右侧系统状态栏最多可同时展示 12 个图标。
-* **紧凑化间距**：图标较多时自动缩减间距（`mIconSpacing = 3`），容纳更多图标正常排布。
+* **解除数量上限（无限制展示）**：彻底打破系统默认 6 个的限制，所有激活的系统状态栏图标均可完整展示。
+* **紧凑自适应间距**：图标较多时自适应动态缩减间距，确保更多图标平滑完整排布。
 * **解锁受限图标**：恢复实时网速、NFC 等被 HyperOS 屏蔽的图标正常显示。
 * **极致轻量**：无第三方多余依赖，APK 大小仅约 17 KB。
 * **多通道日志**：支持 Logcat（标签：`StatusBarExpand`）及本地文件 `/sdcard/statusbar_expand.log` 诊断。
@@ -124,10 +124,10 @@ cd HyperOS-StatusBar-Expand
 
 ## 📲 安装与使用
 
-1. 在 [Releases](../../releases) 页面下载 `HyperOS_StatusBar_12Icons.apk`。
+1. 在 [Releases](../../releases) 页面下载 `HyperOS_StatusBar_Unlimited.apk`。
 2. 安装 APK 至手机。
 3. 打开 **LSPosed 管理器**：
-   * 勾选启用 **HyperOS Status Bar 12 Icons** 模块。
+   * 勾选启用 **HyperOS Status Bar Unlimited Icons** 模块。
    * 确认作用域包含 **系统界面 (System UI / `com.android.systemui`)**。
 4. 重启 SystemUI（或重启手机）：
    ```bash

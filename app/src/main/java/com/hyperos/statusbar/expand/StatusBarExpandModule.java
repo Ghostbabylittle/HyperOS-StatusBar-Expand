@@ -2,11 +2,13 @@ package com.hyperos.statusbar.expand;
 
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.LinearLayout;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,8 +16,6 @@ import io.github.libxposed.api.XposedInterface;
 import io.github.libxposed.api.XposedModule;
 
 public class StatusBarExpandModule extends XposedModule {
-
-    private static final int MAX_STATUS_ICONS = 12;
 
     public StatusBarExpandModule() {
         super();
@@ -42,12 +42,13 @@ public class StatusBarExpandModule extends XposedModule {
         Logger.log("==================================================");
         Logger.log("HyperOS StatusBar Expand Module (LibXposed API 101) loaded!");
         Logger.log("Target package: com.android.systemui");
-        Logger.log("Max status icons cap: " + MAX_STATUS_ICONS);
+        Logger.log("Unlimited status icons mode active");
         Logger.log("==================================================");
 
         ClassLoader cl = param.getClassLoader();
         hookMiuiIconManagerUtils(cl);
         hookMiuiStatusIconContainer(cl);
+        hookMiuiDripLeftStatusIconContainer(cl);
         hookAospStatusIconContainer(cl);
         hookMiuiPhoneStatusBarView(cl);
     }
@@ -77,31 +78,39 @@ public class StatusBarExpandModule extends XposedModule {
     }
 
     private void clearBlockLists(Class<?> utilsClass) {
-        try {
-            Field rightBlockField = findField(utilsClass, "RIGHT_BLOCK_LIST");
-            if (rightBlockField != null) {
-                rightBlockField.setAccessible(true);
-                Object list = rightBlockField.get(null);
-                if (list instanceof List) {
-                    int originalSize = ((List<?>) list).size();
-                    ((List<?>) list).clear();
-                    Logger.log("Cleared RIGHT_BLOCK_LIST (was " + originalSize + " items)");
+        String[] fieldNames = new String[]{
+                "RIGHT_BLOCK_LIST",
+                "MINI_RIGHT_BLOCK_LIST",
+                "CONTROL_CENTER_BLOCK_LIST"
+        };
+        for (String fn : fieldNames) {
+            try {
+                Field f = findField(utilsClass, fn);
+                if (f != null) {
+                    f.setAccessible(true);
+                    Object list = f.get(null);
+                    if (list instanceof List) {
+                        int originalSize = ((List<?>) list).size();
+                        ((List<?>) list).clear();
+                        Logger.log("Cleared " + fn + " (was " + originalSize + " items)");
+                    }
                 }
+            } catch (Throwable t) {
+                Logger.log("Failed to clear " + fn, t);
             }
-
-            Field miniRightBlockField = findField(utilsClass, "MINI_RIGHT_BLOCK_LIST");
-            if (miniRightBlockField != null) {
-                miniRightBlockField.setAccessible(true);
-                Object list = miniRightBlockField.get(null);
-                if (list instanceof List) {
-                    int originalSize = ((List<?>) list).size();
-                    ((List<?>) list).clear();
-                    Logger.log("Cleared MINI_RIGHT_BLOCK_LIST (was " + originalSize + " items)");
-                }
-            }
-        } catch (Throwable t) {
-            Logger.log("Failed to clear block lists", t);
         }
+
+        try {
+            for (Field f : utilsClass.getDeclaredFields()) {
+                if (Modifier.isStatic(f.getModifiers()) && List.class.isAssignableFrom(f.getType())) {
+                    f.setAccessible(true);
+                    Object list = f.get(null);
+                    if (list instanceof List) {
+                        ((List<?>) list).clear();
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
     }
 
     private void hookMiuiStatusIconContainer(ClassLoader cl) {
@@ -142,9 +151,7 @@ public class StatusBarExpandModule extends XposedModule {
             for (Method m : containerClass.getDeclaredMethods()) {
                 if ("setShouldRestrictIcons".equals(m.getName())) {
                     try {
-                        hook(m).intercept(chain -> {
-                            return chain.proceed(new Object[]{ false });
-                        });
+                        hook(m).intercept(chain -> chain.proceed(new Object[]{ false }));
                     } catch (Throwable ignored) {}
                 }
             }
@@ -153,9 +160,7 @@ public class StatusBarExpandModule extends XposedModule {
             for (Method m : containerClass.getDeclaredMethods()) {
                 if ("setNeedLimitIcon".equals(m.getName())) {
                     try {
-                        hook(m).intercept(chain -> {
-                            return chain.proceed(new Object[]{ false });
-                        });
+                        hook(m).intercept(chain -> chain.proceed(new Object[]{ false }));
                     } catch (Throwable ignored) {}
                 }
             }
@@ -168,26 +173,22 @@ public class StatusBarExpandModule extends XposedModule {
                             ViewGroup container = (ViewGroup) chain.getThisObject();
                             setFieldValue(container, "mShouldRestrictIcons", false);
                             setFieldValue(container, "mNeedLimitIcon", false);
+                            setFieldValue(container, "mIconSpacing", 3);
 
-                            int childCount = container.getChildCount();
                             int widthSpec = (int) chain.getArg(0);
                             int heightSpec = (int) chain.getArg(1);
-
-                            if (childCount > 6) {
-                                setFieldValue(container, "mIconSpacing", 3);
-                            }
-
                             int specMode = View.MeasureSpec.getMode(widthSpec);
                             int specSize = View.MeasureSpec.getSize(widthSpec);
-                            if (specMode == View.MeasureSpec.AT_MOST && specSize < 700) {
-                                widthSpec = View.MeasureSpec.makeMeasureSpec(700, View.MeasureSpec.AT_MOST);
+
+                            if (specMode != View.MeasureSpec.EXACTLY || specSize < 1000) {
+                                widthSpec = View.MeasureSpec.makeMeasureSpec(4096, View.MeasureSpec.AT_MOST);
                             }
 
                             Object res = chain.proceed(new Object[]{ widthSpec, heightSpec });
 
                             Logger.log("MiuiStatusIconContainer.onMeasure: measured=(" +
                                     container.getMeasuredWidth() + "x" + container.getMeasuredHeight() +
-                                    "), childCount=" + childCount);
+                                    "), childCount=" + container.getChildCount());
                             return res;
                         });
                     } catch (Throwable ignored) {}
@@ -223,20 +224,67 @@ public class StatusBarExpandModule extends XposedModule {
         }
     }
 
+    private void hookMiuiDripLeftStatusIconContainer(ClassLoader cl) {
+        try {
+            Class<?> dripClass = findClass(cl, "com.android.systemui.statusbar.views.MiuiDripLeftStatusIconContainer");
+            if (dripClass == null) return;
+
+            for (Method m : dripClass.getDeclaredMethods()) {
+                if ("setIgnoredSlots".equals(m.getName())) {
+                    try {
+                        hook(m).intercept(chain -> chain.proceed(new Object[]{ new ArrayList<String>() }));
+                    } catch (Throwable ignored) {}
+                }
+                if ("setShouldRestrictIcons".equals(m.getName())) {
+                    try {
+                        hook(m).intercept(chain -> chain.proceed(new Object[]{ false }));
+                    } catch (Throwable ignored) {}
+                }
+                if ("setNeedLimitIcon".equals(m.getName())) {
+                    try {
+                        hook(m).intercept(chain -> chain.proceed(new Object[]{ false }));
+                    } catch (Throwable ignored) {}
+                }
+            }
+            Logger.log("Hooked MiuiDripLeftStatusIconContainer successfully");
+        } catch (Throwable t) {
+            Logger.log("Failed to hook MiuiDripLeftStatusIconContainer", t);
+        }
+    }
+
     private void layoutStatusIcons(ViewGroup container) {
         int childCount = container.getChildCount();
         int containerWidth = container.getWidth();
         int paddingEnd = container.getPaddingEnd();
+        int paddingStart = container.getPaddingStart();
 
-        Logger.log("MiuiStatusIconContainer.onLayout: containerWidth=" + containerWidth + ", childCount=" + childCount);
+        // 1. Resolve view state tag ID (status_bar_view_state_tag)
+        int tagId = 0;
+        try {
+            tagId = container.getResources().getIdentifier("status_bar_view_state_tag", "id", "com.android.systemui");
+        } catch (Throwable ignored) {}
+        if (tagId == 0) {
+            tagId = 0x7f0a0a38;
+        }
 
-        List<View> visibleChildren = new ArrayList<>();
+        // 2. Disable clipping on container and parent hierarchy so icons can expand to the left without being clipped
+        try {
+            container.setClipChildren(false);
+            container.setClipToPadding(false);
+            ViewParent p = container.getParent();
+            while (p instanceof ViewGroup) {
+                ViewGroup vg = (ViewGroup) p;
+                vg.setClipChildren(false);
+                vg.setClipToPadding(false);
+                p = vg.getParent();
+            }
+        } catch (Throwable ignored) {}
+
+        // 3. Filter eligible displayable icons
+        List<View> eligibleChildren = new ArrayList<>();
         for (int i = 0; i < childCount; i++) {
             View child = container.getChildAt(i);
             if (child == null) continue;
-
-            Object tag = child.getTag();
-            if (tag == null) continue;
 
             boolean isBlocked = false;
             try {
@@ -259,70 +307,99 @@ public class StatusBarExpandModule extends XposedModule {
                 if (s != null) slot = s.toString();
             } catch (Throwable ignored) {}
 
-            Logger.log("  Child " + i + ": slot=" + slot + ", isVisible=" + isVisible + ", isBlocked=" + isBlocked + ", width=" + child.getWidth());
-
             if (!isBlocked && isVisible) {
-                visibleChildren.add(child);
+                eligibleChildren.add(child);
             } else {
                 child.setVisibility(View.GONE);
+                try {
+                    Method m = child.getClass().getMethod("setVisibleState", int.class, boolean.class);
+                    m.invoke(child, 2, false);
+                } catch (Throwable ignored) {}
+                Object tag = getIconState(child, tagId);
+                if (tag != null) {
+                    setFieldValue(tag, "visibleState", 2);
+                }
             }
         }
 
-        int totalToDisplay = Math.min(visibleChildren.size(), MAX_STATUS_ICONS);
-        Logger.log("Visible status icons eligible: " + visibleChildren.size() + ", displaying: " + totalToDisplay);
+        int count = eligibleChildren.size();
+        Logger.log("MiuiStatusIconContainer.onLayout: containerWidth=" + containerWidth +
+                ", childCount=" + childCount + ", eligible=" + count);
 
+        if (count == 0) {
+            return;
+        }
+
+        // 4. Calculate total width of all eligible icons
         int totalIconsWidth = 0;
-        for (int i = 0; i < totalToDisplay; i++) {
-            View v = visibleChildren.get(i);
-            int w = v.getWidth();
-            if (w <= 0) w = v.getMeasuredWidth();
+        for (int i = 0; i < count; i++) {
+            View child = eligibleChildren.get(i);
+            int w = child.getWidth();
+            if (w <= 0) w = child.getMeasuredWidth();
             if (w <= 0) w = 32;
             totalIconsWidth += w;
         }
 
-        int availableWidth = Math.max(100, containerWidth - container.getPaddingStart() - paddingEnd);
+        int availableWidth = Math.max(100, containerWidth - paddingStart - paddingEnd);
         int spacing = 3;
-        if (totalToDisplay > 1) {
+        if (count > 1) {
             int remainingSpace = availableWidth - totalIconsWidth;
             if (remainingSpace > 0) {
-                spacing = Math.min(6, remainingSpace / (totalToDisplay - 1));
+                spacing = Math.min(6, Math.max(2, remainingSpace / (count - 1)));
             } else {
-                spacing = 1;
+                // Dynamically tighten spacing so all icons fit seamlessly
+                int needed = totalIconsWidth - availableWidth;
+                int reduce = needed / (count - 1);
+                spacing = Math.max(-2, 1 - reduce);
             }
         }
 
-        int currentX = containerWidth - paddingEnd;
+        // 5. Place ALL eligible icons right-to-left without any cap (genuinely unlimited)
+        float currentX = containerWidth - paddingEnd;
 
-        for (int i = 0; i < visibleChildren.size(); i++) {
-            View child = visibleChildren.get(i);
-            Object tag = child.getTag();
+        for (int i = count - 1; i >= 0; i--) {
+            View child = eligibleChildren.get(i);
+            int childW = child.getWidth();
+            if (childW <= 0) childW = child.getMeasuredWidth();
+            if (childW <= 0) childW = 32;
 
-            if (i < totalToDisplay) {
-                int childW = child.getWidth();
-                if (childW <= 0) childW = child.getMeasuredWidth();
-                if (childW <= 0) childW = 32;
+            currentX -= childW;
+            float posX = currentX;
 
-                currentX -= childW;
-                int posX = Math.max(0, currentX);
+            child.setVisibility(View.VISIBLE);
+            child.setAlpha(1.0f);
+            child.setTranslationX(posX);
 
-                child.setVisibility(View.VISIBLE);
-                child.setAlpha(1.0f);
-                child.setTranslationX(posX);
+            try {
+                Method m = child.getClass().getMethod("setVisibleState", int.class, boolean.class);
+                m.invoke(child, 0, false);
+            } catch (Throwable ignored) {}
 
-                if (tag != null) {
-                    setFieldValue(tag, "visibleState", 0); // VISIBLE
-                    setFieldValue(tag, "xTranslation", (float) posX);
-                    setFieldValue(tag, "alpha", 1.0f);
-                }
-
-                currentX -= spacing;
-            } else {
-                child.setVisibility(View.GONE);
-                if (tag != null) {
-                    setFieldValue(tag, "visibleState", 2); // GONE
-                }
+            Object tag = getIconState(child, tagId);
+            if (tag != null) {
+                setFieldValue(tag, "visibleState", 0);
+                setFieldValue(tag, "xTranslation", posX);
+                setFieldValue(tag, "alpha", 1.0f);
             }
+
+            currentX -= spacing;
         }
+    }
+
+    private Object getIconState(View child, int tagId) {
+        if (child == null) return null;
+        Object tag = null;
+        if (tagId != 0) {
+            try {
+                tag = child.getTag(tagId);
+            } catch (Throwable ignored) {}
+        }
+        if (tag == null) {
+            try {
+                tag = child.getTag();
+            } catch (Throwable ignored) {}
+        }
+        return tag;
     }
 
     private void hookAospStatusIconContainer(ClassLoader cl) {
@@ -375,6 +452,11 @@ public class StatusBarExpandModule extends XposedModule {
                             Object thisObj = chain.getThisObject();
 
                             try {
+                                if (thisObj instanceof ViewGroup) {
+                                    ((ViewGroup) thisObj).setClipChildren(false);
+                                    ((ViewGroup) thisObj).setClipToPadding(false);
+                                }
+
                                 Object statusIcons = getFieldValue(thisObj, "mStatusBarStatusIcons");
                                 if (statusIcons != null) {
                                     Method setIgnored = statusIcons.getClass().getMethod("setIgnoredSlots", List.class);
@@ -398,12 +480,12 @@ public class StatusBarExpandModule extends XposedModule {
                                         LinearLayout.LayoutParams rightLinLp = (LinearLayout.LayoutParams) rightLp;
                                         LinearLayout.LayoutParams leftLinLp = (LinearLayout.LayoutParams) leftLp;
 
-                                        leftLinLp.weight = 0.8f;
-                                        rightLinLp.weight = 1.2f;
+                                        leftLinLp.weight = 0.7f;
+                                        rightLinLp.weight = 1.3f;
 
                                         leftView.setLayoutParams(leftLinLp);
                                         rightView.setLayoutParams(rightLinLp);
-                                        Logger.log("Adjusted container weights: left=0.8, right=1.2");
+                                        Logger.log("Adjusted container weights: left=0.7, right=1.3");
                                     }
                                 }
                             } catch (Throwable t) {

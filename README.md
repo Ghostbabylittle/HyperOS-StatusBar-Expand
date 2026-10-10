@@ -1,4 +1,4 @@
-# HyperOS Status Bar 12 Icons
+# HyperOS Status Bar Unlimited Icons
 
 [English](README.md) | [简体中文](README_CN.md)
 
@@ -7,7 +7,7 @@
 [![Xiaomi HyperOS](https://img.shields.io/badge/HyperOS-Supported-orange.svg)]()
 [![Android 14](https://img.shields.io/badge/Android-14-green.svg)]()
 
-A lightweight LSPosed module for **Xiaomi HyperOS** that expands the right-side system status bar icon limit from **6 to 12**.
+A lightweight LSPosed module for **Xiaomi HyperOS** that completely removes the right-side system status bar icon limit (expanding from the stock 6 icons to unlimited icons).
 
 ---
 
@@ -58,15 +58,15 @@ This module hooks SystemUI to eliminate the icon restriction:
 [Stage 3: Layout Recalculation]
    ├── Iterates all eligible status icon views
    ├── Recalculates positive X-coordinates from container width right-to-left
-   └── Forces visibleState = VISIBLE and alpha = 1.0f for up to 12 icons
+   └── Forces visibleState = VISIBLE and alpha = 1.0f for all eligible icons without cap
 ```
 
 ---
 
 ## 🚀 Key Features
 
-* **Expands Limit to 12 Icons**: Allows up to 12 status icons to display simultaneously on the right side.
-* **Condensed Spacing**: Dynamically reduces icon spacing (`mIconSpacing = 3`) when icon count is high so more icons fit on screen.
+* **Unlimited Status Icons**: Removes the hardcoded limit entirely, allowing all active status icons to display simultaneously on the right side.
+* **Condensed & Adaptive Spacing**: Dynamically adjusts icon spacing when icon count is high so all icons fit seamlessly.
 * **Unlocks Blocked Slots**: Unblocks slots such as network speed and NFC that are otherwise suppressed by HyperOS.
 * **Ultra-Lightweight**: Zero third-party runtime dependencies (~17 KB APK).
 * **Multi-Channel Logging**: Diagnostic logs output to Logcat (`tag: StatusBarExpand`) and persistent file at `/sdcard/statusbar_expand.log`.
@@ -123,10 +123,10 @@ The output APK is generated at `app/build/outputs/apk/release/app-release.apk`.
 
 ## 📲 Installation & Usage
 
-1. Download `HyperOS_StatusBar_12Icons.apk` from [Releases](../../releases).
+1. Download `HyperOS_StatusBar_Unlimited.apk` from [Releases](../../releases).
 2. Install the APK on your device.
 3. Open **LSPosed Manager**:
-   * Enable the **HyperOS Status Bar 12 Icons** module.
+   * Enable the **HyperOS Status Bar Unlimited Icons** module.
    * Verify that **System UI** (`com.android.systemui`) is checked in scope.
 4. Restart System UI (or reboot device):
    ```bash

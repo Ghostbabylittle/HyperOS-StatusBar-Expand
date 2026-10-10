@@ -4,7 +4,7 @@
     <application
         android:allowBackup="true"
         android:icon="@android:drawable/ic_menu_manage"
-        android:label="HyperOS Status Bar 12 Icons"
+        android:label="HyperOS Status Bar Unlimited Icons"
         android:supportsRtl="true">
 
         <meta-data
@@ -12,7 +12,7 @@
             android:value="true" />
         <meta-data
             android:name="xposeddescription"
-            android:value="Expand HyperOS status bar system icons limit from 6 to 12" />
+            android:value="Expand HyperOS status bar system icons limit without cap (unlimited icons)" />
         <meta-data
             android:name="xposedminversion"
             android:value="82" />
