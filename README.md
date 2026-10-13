@@ -1,3 +1,5 @@
+<img width="1440" height="3200" alt="1000095448" src="https://github.com/user-attachments/assets/cc7b5024-de07-4510-8e21-7f3fd9704402" />
+<img width="1440" height="3200" alt="1000095447" src="https://github.com/user-attachments/assets/28f46266-2d66-4f43-8d49-53485ce23d0d" />
 # HyperOS Status Bar Unlimited Icons
 
 [English](README.md) | [简体中文](README_CN.md)
